@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -82,32 +83,38 @@ fun TerminalScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionChip("Setup Claude") { viewModel.setupClaude() }
                 ActionChip("Login") { viewModel.login() }
+                ActionChip("Clear") { viewModel.clear() }
                 IconButton(onClick = onOpenSettings, modifier = Modifier.size(32.dp)) {
                     Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TerminalDim, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
-        // Output
-        LazyColumn(
-            state = listState,
+        // Output (selectable for copy/paste)
+        SelectionContainer(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .onSizeChanged { size ->
-                    if (cellW > 0f && cellH > 0f) {
-                        val cols = (size.width / cellW).toInt().coerceAtLeast(10)
-                        val rows = (size.height / cellH).toInt().coerceAtLeast(4)
-                        viewModel.resize(rows, cols)
-                    }
-                }
         ) {
-            items(viewModel.lines) { line ->
-                BasicText(text = line, style = mono)
-            }
-            item {
-                BasicText(text = viewModel.currentLine.value, style = mono)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .onSizeChanged { size ->
+                        if (cellW > 0f && cellH > 0f) {
+                            val cols = (size.width / cellW).toInt().coerceAtLeast(10)
+                            val rows = (size.height / cellH).toInt().coerceAtLeast(4)
+                            viewModel.resize(rows, cols)
+                        }
+                    }
+            ) {
+                items(viewModel.lines) { line ->
+                    BasicText(text = line, style = mono)
+                }
+                item {
+                    BasicText(text = viewModel.currentLine.value, style = mono)
+                }
             }
         }
 

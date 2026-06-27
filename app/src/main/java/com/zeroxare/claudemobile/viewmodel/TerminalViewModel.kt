@@ -118,6 +118,13 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         session?.resize(rows, cols)
     }
 
+    /** Clear the on-screen scrollback (does not affect the shell). */
+    fun clear() {
+        lines.clear()
+        lineBuf.setLength(0)
+        currentLine.value = AnnotatedString("")
+    }
+
     /** Install the bootstrap (Node + Claude Code), then run the CLI setup. */
     fun setupClaude() {
         viewModelScope.launch {
