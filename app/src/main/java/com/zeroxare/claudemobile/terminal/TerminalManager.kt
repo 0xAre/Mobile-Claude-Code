@@ -76,7 +76,7 @@ class TerminalManager(private val filesDir: File) {
         if (!target.exists()) return listOf(TerminalLine("ls: $target: No such file or directory", isError = true))
 
         val files = target.listFiles() ?: return listOf(TerminalLine("ls: cannot read directory", isError = true))
-        val filtered = if (showHidden) files else files.filter { !it.name.startsWith(".") }
+        val filtered = if (showHidden) files.toList() else files.filter { !it.name.startsWith(".") }
         val sorted = filtered.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
 
         return if (longFormat) {
