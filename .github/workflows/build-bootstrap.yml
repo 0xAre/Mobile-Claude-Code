@@ -1,0 +1,52 @@
+name: Build Bootstrap (experimental)
+
+# Assembles bootstrap-<abi>.zip (Termux userland + Node + Claude Code) and
+# publishes them to the 'bootstrap-v1' release, which the app downloads at
+# runtime ("Setup Claude"). MANUAL ONLY — this is experimental and needs
+# on-device validation. See docs/FASE2.md and scripts/build-bootstrap.sh.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish bootstrap archives to"
+        default: "bootstrap-v1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install qemu-user-static + binfmt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support zip unzip curl
+          # Register binfmt handlers for cross-arch execution.
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || true
+
+      - name: Build bootstrap for ${{ matrix.abi }}
+        run: |
+          chmod +x scripts/build-bootstrap.sh
+          scripts/build-bootstrap.sh "${{ matrix.abi }}" "$PWD/dist"
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-${{ matrix.abi }}
+          path: dist/bootstrap-${{ matrix.abi }}.zip
+          if-no-files-found: error
+
+      - name: Publish to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: dist/bootstrap-${{ matrix.abi }}.zip

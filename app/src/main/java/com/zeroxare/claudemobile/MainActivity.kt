@@ -13,11 +13,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.zeroxare.claudemobile.ui.screens.MainScreen
 import com.zeroxare.claudemobile.ui.screens.SettingsScreen
+import com.zeroxare.claudemobile.ui.screens.TerminalScreen
 import com.zeroxare.claudemobile.ui.theme.ClaudeMobileTheme
 import com.zeroxare.claudemobile.ui.theme.TerminalBg
-import com.zeroxare.claudemobile.viewmodel.MainViewModel
+import com.zeroxare.claudemobile.viewmodel.TerminalViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,20 +39,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val viewModel: MainViewModel = viewModel()
 
-    NavHost(navController = navController, startDestination = "main") {
-        composable("main") {
-            MainScreen(
-                viewModel = viewModel,
+    NavHost(navController = navController, startDestination = "terminal") {
+        composable("terminal") {
+            val terminalViewModel: TerminalViewModel = viewModel()
+            TerminalScreen(
+                viewModel = terminalViewModel,
                 onOpenSettings = { navController.navigate("settings") }
             )
         }
         composable("settings") {
-            SettingsScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

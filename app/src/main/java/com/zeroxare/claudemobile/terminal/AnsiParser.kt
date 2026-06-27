@@ -97,6 +97,6 @@ object AnsiParser {
     }
 
     fun stripAnsi(input: String): String {
-        return input.replace(Regex("\[[0-9;]*[A-Za-z]"), "")
+        return input.replace(Regex("\u001B\\[[0-9;]*[A-Za-z]"), "")
     }
 }
