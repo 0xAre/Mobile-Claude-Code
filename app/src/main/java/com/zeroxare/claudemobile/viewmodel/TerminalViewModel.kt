@@ -10,8 +10,11 @@ import com.zeroxare.claudemobile.engine.BootstrapInstaller
 import com.zeroxare.claudemobile.engine.ClaudeLauncher
 import com.zeroxare.claudemobile.engine.LinuxEnvironment
 import com.zeroxare.claudemobile.engine.TerminalSession
+import com.zeroxare.claudemobile.service.TerminalService
 import com.zeroxare.claudemobile.terminal.AnsiParser
 import kotlinx.coroutines.launch
+import java.nio.ByteBuffer
+import java.nio.CharBuffer
 
 /**
  * Drives the real (PTY-backed) terminal screen: starts a shell session, renders
@@ -45,6 +48,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     fun startSession() {
         if (session != null) return
         env.ensureDirs()
+        TerminalService.start(getApplication())
         val s = TerminalSession(env, viewModelScope)
         session = s
         // Begin collecting before start() so we don't miss early output.
@@ -59,7 +63,20 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    private fun appendBytes(bytes: ByteArray) = appendText(String(bytes, Charsets.UTF_8))
+    // Incremental UTF-8 decoder state: bytes of an incomplete trailing
+    // multi-byte sequence are carried over to the next chunk so characters
+    // split across reads don't get corrupted.
+    private var carry = ByteArray(0)
+
+    private fun appendBytes(bytes: ByteArray) {
+        val combined = carry + bytes
+        val bb = ByteBuffer.wrap(combined)
+        val cb = CharBuffer.allocate(combined.size + 1)
+        Charsets.UTF_8.newDecoder().decode(bb, cb, false)
+        cb.flip()
+        carry = ByteArray(bb.remaining()).also { bb.get(it) }
+        appendText(cb.toString())
+    }
 
     private fun appendText(text: String) {
         for (ch in text) {
@@ -136,6 +153,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         session?.close()
+        TerminalService.stop(getApplication())
         super.onCleared()
     }
 }
