@@ -83,14 +83,26 @@ arsip bootstrap. Tanpa itu, aplikasi tetap jalan sebagai **terminal interaktif
 (shell sistem via PTY)**; tombol "Setup Claude" akan mengunduh bootstrap begitu
 arsipnya dipublikasikan.
 
-### Cara membuat & publikasi bootstrap (sekali saja)
-1. Di perangkat/Termux: siapkan prefix berisi Node + Claude Code:
-   `pkg install nodejs git && npm i -g @anthropic-ai/claude-code`
-2. Zip isi prefix (struktur `bin/`, `lib/`, dst.) → `bootstrap-arm64-v8a.zip`
-   (ulangi per-ABI bila perlu: armeabi-v7a, x86_64).
-3. Buat GitHub Release dengan tag **`bootstrap-v1`**, lampirkan file zip tsb.
-4. Aplikasi akan otomatis mengunduhnya saat "Setup Claude" ditekan.
-   (Sumber bootstrap dasar: termux-packages / Termux bootstrap.)
+### Cara membuat & publikasi bootstrap
+
+**Opsi A — otomatis (experimental):** jalankan workflow **"Build Bootstrap
+(experimental)"** (Actions → Run workflow). Ia memakai `scripts/build-bootstrap.sh`
+untuk: unduh bootstrap Termux per-ABI → pasang Node + Claude Code via emulasi
+qemu → repackage → publish ke Release `bootstrap-v1`. ⚠️ Belum tervalidasi di
+perangkat; kemungkinan perlu iterasi (lihat caveat di bawah).
+
+**Opsi B — manual (paling andal):**
+1. Di Termux (HP): `pkg install nodejs git && npm i -g @anthropic-ai/claude-code`
+2. Zip **isi** prefix (`bin/`, `lib/`, `SYMLINKS.txt`, …) → `bootstrap-arm64-v8a.zip`
+3. Buat Release tag **`bootstrap-v1`**, lampirkan zip-nya
+4. App mengunduhnya saat "Setup Claude".
+
+#### Caveat relokasi (penting)
+Biner Termux di-build untuk prefix `/data/data/com.termux/...`, sedangkan app ini
+memakai `/data/data/com.zeroxare.claudemobile/...`. Agar jalan, app menyetel
+`LD_LIBRARY_PATH=$PREFIX/lib` (lihat `LinuxEnvironment.buildEnv`). Jika ada biner
+yang masih hardcode path Termux, perlu `patchelf`/`termux-exec` saat membangun
+bootstrap. Inilah bagian yang perlu divalidasi di perangkat.
 
 ## Catatan cepat untuk test SEKARANG (interim)
 
