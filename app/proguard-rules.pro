@@ -1,0 +1,4 @@
+-keep class com.zeroxare.claudemobile.data.api.models.** { *; }
+-keepattributes *Annotation*
+-dontwarn okhttp3.**
+-dontwarn okio.**
