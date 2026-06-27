@@ -70,11 +70,27 @@ interaktif penuh.
 
 ## Urutan kerja Fase 2
 
-1. ✅ Scaffold engine (berkas di atas) — **selesai, meng-compile**.
-2. ⏳ `TerminalScreen` Compose + tombol keyboard khusus + wire ke navigasi.
-3. ⏳ Aktifkan native PTY (CMake + targetSdk 28) → terminal interaktif.
-4. ⏳ Sediakan bootstrap (bundle/unduh) berisi Node + Claude Code.
-5. ⏳ Alur sekali-jalan: install bootstrap → `claude` → **login akun** → siap.
+1. ✅ Scaffold engine — **selesai**.
+2. ✅ `TerminalScreen` Compose + tombol keyboard khusus + wire ke navigasi (jadi layar utama) — **selesai**.
+3. ✅ Aktifkan native PTY (CMake + targetSdk 28) → terminal interaktif — **selesai, build hijau**.
+4. ✅ Unduh bootstrap saat runtime (`installFromUrl`) → tinggal **publikasikan** arsipnya.
+5. ⏳ Publikasikan `bootstrap-<abi>.zip` (Node + Claude Code) ke GitHub Releases (tag `bootstrap-v1`).
+6. ⏳ Alur sekali-jalan: Setup Claude → unduh bootstrap → `claude` → **login akun** → siap.
+
+### Status: sisi-aplikasi Fase 2 SELESAI
+Yang tersisa adalah **satu artifact ops**, bukan kode: membuat & meng-upload
+arsip bootstrap. Tanpa itu, aplikasi tetap jalan sebagai **terminal interaktif
+(shell sistem via PTY)**; tombol "Setup Claude" akan mengunduh bootstrap begitu
+arsipnya dipublikasikan.
+
+### Cara membuat & publikasi bootstrap (sekali saja)
+1. Di perangkat/Termux: siapkan prefix berisi Node + Claude Code:
+   `pkg install nodejs git && npm i -g @anthropic-ai/claude-code`
+2. Zip isi prefix (struktur `bin/`, `lib/`, dst.) → `bootstrap-arm64-v8a.zip`
+   (ulangi per-ABI bila perlu: armeabi-v7a, x86_64).
+3. Buat GitHub Release dengan tag **`bootstrap-v1`**, lampirkan file zip tsb.
+4. Aplikasi akan otomatis mengunduhnya saat "Setup Claude" ditekan.
+   (Sumber bootstrap dasar: termux-packages / Termux bootstrap.)
 
 ## Catatan cepat untuk test SEKARANG (interim)
 

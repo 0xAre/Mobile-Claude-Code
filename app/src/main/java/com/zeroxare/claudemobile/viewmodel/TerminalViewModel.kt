@@ -37,6 +37,11 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
     private val lineBuf = StringBuilder()
 
+    private companion object {
+        /** GitHub Release tag that hosts the bootstrap-<abi>.zip archives. */
+        const val BOOTSTRAP_TAG = "bootstrap-v1"
+    }
+
     fun startSession() {
         if (session != null) return
         env.ensureDirs()
@@ -97,20 +102,30 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
             appendSystem("Memeriksa environment…")
             when (val r = bootstrap.install()) {
                 is BootstrapInstaller.Result.AlreadyInstalled,
-                is BootstrapInstaller.Result.Installed -> {
-                    appendSystem("Bootstrap siap. Menjalankan setup Claude Code…")
-                    ClaudeLauncher.setupCommands.forEach { session?.write("$it\n") }
+                is BootstrapInstaller.Result.Installed -> runClaudeSetup()
+                BootstrapInstaller.Result.MissingArchive -> {
+                    appendSystem("Bootstrap tidak ada di APK — mencoba mengunduh dari Releases…")
+                    when (val d = bootstrap.installFromUrl(bootstrap.downloadUrlFor(BOOTSTRAP_TAG))) {
+                        is BootstrapInstaller.Result.AlreadyInstalled,
+                        is BootstrapInstaller.Result.Installed -> runClaudeSetup()
+                        BootstrapInstaller.Result.MissingArchive ->
+                            appendSystem(
+                                "Bootstrap belum dipublikasikan di Releases (tag '$BOOTSTRAP_TAG').\n" +
+                                "Lihat docs/FASE2.md untuk membuat & meng-upload bootstrap-<abi>.zip."
+                            )
+                        is BootstrapInstaller.Result.Failed ->
+                            appendSystem("Gagal mengunduh bootstrap: ${d.error.message}")
+                    }
                 }
-                BootstrapInstaller.Result.MissingArchive ->
-                    appendSystem(
-                        "Bootstrap (Node + Claude Code) belum tersedia di build ini.\n" +
-                        "Lihat docs/FASE2.md untuk menambahkan bootstrap-<abi>.zip\n" +
-                        "atau URL unduhan rilis."
-                    )
                 is BootstrapInstaller.Result.Failed ->
                     appendSystem("Gagal memasang bootstrap: ${r.error.message}")
             }
         }
+    }
+
+    private fun runClaudeSetup() {
+        appendSystem("Bootstrap siap. Menjalankan setup Claude Code…")
+        ClaudeLauncher.setupCommands.forEach { session?.write("$it\n") }
     }
 
     /** Start the official Claude Code login (OAuth with your Claude account). */

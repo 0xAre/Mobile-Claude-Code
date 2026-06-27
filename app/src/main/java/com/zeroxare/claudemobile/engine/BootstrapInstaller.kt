@@ -3,7 +3,12 @@ package com.zeroxare.claudemobile.engine
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 
 /**
@@ -51,34 +56,73 @@ class BootstrapInstaller(
         if (!available) return@withContext Result.MissingArchive
 
         try {
-            var count = 0
-            context.assets.open(assetName).use { raw ->
-                ZipInputStream(raw.buffered()).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null) {
-                        val out = File(env.prefixDir, entry.name)
-                        if (entry.isDirectory) {
-                            out.mkdirs()
-                        } else {
-                            out.parentFile?.mkdirs()
-                            out.outputStream().use { zip.copyTo(it) }
-                            // Binaries under bin/ and lib/ must be executable.
-                            if (out.parentFile?.name in setOf("bin", "lib", "libexec")) {
-                                out.setExecutable(true, false)
-                            }
-                            count++
-                        }
-                        zip.closeEntry()
-                        entry = zip.nextEntry
-                    }
-                }
+            val count = context.assets.open(assetName).use { raw ->
+                extractZip(raw.buffered())
             }
-            applySymlinks()
-            env.bootstrapMarker.writeText(BOOTSTRAP_VERSION)
+            finishInstall()
             Result.Installed(count)
         } catch (t: Throwable) {
             Result.Failed(t)
         }
+    }
+
+    /**
+     * Download a bootstrap archive from [url] and install it. Used when the
+     * archive isn't bundled in assets (keeps the APK small). Default URL points
+     * at this repo's GitHub Releases — publish `bootstrap-<abi>.zip` there.
+     */
+    suspend fun installFromUrl(url: String): Result = withContext(Dispatchers.IO) {
+        if (env.isBootstrapInstalled) return@withContext Result.AlreadyInstalled
+        env.ensureDirs()
+        try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .build()
+            val req = Request.Builder().url(url).build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext if (resp.code == 404) Result.MissingArchive
+                    else Result.Failed(IOException("HTTP ${resp.code} fetching bootstrap"))
+                }
+                val stream = resp.body?.byteStream()
+                    ?: return@withContext Result.Failed(IOException("empty response body"))
+                val count = extractZip(stream.buffered())
+                finishInstall()
+                Result.Installed(count)
+            }
+        } catch (t: Throwable) {
+            Result.Failed(t)
+        }
+    }
+
+    private fun extractZip(input: InputStream): Int {
+        var count = 0
+        ZipInputStream(input).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                val out = File(env.prefixDir, entry.name)
+                if (entry.isDirectory) {
+                    out.mkdirs()
+                } else {
+                    out.parentFile?.mkdirs()
+                    out.outputStream().use { zip.copyTo(it) }
+                    // Binaries under bin/ and lib/ must be executable.
+                    if (out.parentFile?.name in setOf("bin", "lib", "libexec")) {
+                        out.setExecutable(true, false)
+                    }
+                    count++
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+        }
+        return count
+    }
+
+    private fun finishInstall() {
+        applySymlinks()
+        env.bootstrapMarker.writeText(BOOTSTRAP_VERSION)
     }
 
     /**
