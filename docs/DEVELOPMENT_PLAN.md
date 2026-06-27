@@ -22,6 +22,49 @@ Fase 5 menyiapkan distribusi (APK rilis, GitHub Releases, opsi F-Droid).
 
 ---
 
+## 1a. Keputusan Terkunci & Definisi MVP
+
+Dua keputusan utama sudah dikunci (lihat Bagian 3 & 3a untuk alasan teknis):
+
+- **Lisensi → GPLv3.** MVP mengharuskan *login akun Claude*, yang hanya sah bila
+  menjalankan Claude Code CLI asli di atas environment ala-Termux. Menggunakan ulang
+  komponen Termux yang sudah teruji (terminal core + bootstrap) jauh lebih cepat
+  daripada menulis PTY native dari nol — dan itu mewajibkan GPLv3. File `LICENSE`
+  (GPLv3) sudah ditambahkan.
+- **Fokus → MVP satu mode: "Mode Akun Claude" (Path A).** Mode API key & agen
+  native Kotlin **ditunda** ke pasca-MVP (Path C).
+
+### Definisi MVP (target rilis pertama yang "bisa dipakai & diinstall")
+Sebuah APK yang bisa dipasang, di mana user dapat:
+1. Membuka aplikasi → terminal sungguhan (interaktif, PTY).
+2. Lingkungan minimal sudah ada **Node.js + Claude Code CLI** (via bootstrap).
+3. Menjalankan `claude` → **login dengan akun Claude** (OAuth resmi, pakai langganan).
+4. Menggunakan Claude Code untuk membaca/menulis file & menjalankan perintah pada
+   workspace di perangkat.
+
+**Termasuk dalam MVP:** Gradle wrapper & build hijau · terminal PTY · bootstrap
+Node + Claude Code CLI · alur `claude` login akun · APK debug terpasang.
+
+**DI LUAR MVP (pasca-MVP):** mode API key, agen native Kotlin, panel chat
+streaming, render markdown, prompt caching, F-Droid, Play Store, multi-ABI penuh.
+
+### Status pengerjaan
+| Item Fase 0 | Status |
+|-------------|--------|
+| Gradle wrapper (G1) | ✅ **Selesai** — `./gradlew` tervalidasi (build Gradle 8.7 berjalan) |
+| `.gitignore` Android | ✅ Selesai |
+| `LICENSE` GPLv3 | ✅ Selesai |
+| Bersihkan `MANAGE_EXTERNAL_STORAGE` (G7) | ✅ Selesai |
+| Build APK debug end-to-end | ⏳ Perlu Android SDK (tak tersedia di kontainer ini) |
+| Terminal PTY + bootstrap (inti MVP) | ⏳ Milestone besar berikutnya (Fase 2) |
+
+> Catatan lingkungan: kontainer dev ini tidak punya Android SDK dan memblokir
+> `dl.google.com`, sehingga build APK penuh harus dijalankan di mesin/CI dengan
+> SDK. Semua berkas build sudah disiapkan agar `./gradlew assembleDebug` jalan di
+> sana.
+
+---
+
 ## 2. Analisis Kondisi Saat Ini
 
 ### Struktur yang sudah ada

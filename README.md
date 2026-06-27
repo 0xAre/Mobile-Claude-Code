@@ -23,7 +23,8 @@ cd claude-code-mobile
 ./gradlew assembleDebug
 ```
 
-Requires Android Studio Hedgehog or later, API 26+.
+Requires Android Studio Hedgehog or later, API 26+. The repo ships a Gradle
+wrapper (`./gradlew`), so no system Gradle install is needed.
 
 ## Architecture
 
@@ -40,5 +41,17 @@ TerminalManager   → ProcessBuilder-based command execution
 ClaudeApiService  → Anthropic Messages API (OkHttp)
 AnsiParser        → VT100 color code → AnnotatedString
 ```
+
+## Roadmap
+
+See [`docs/DEVELOPMENT_PLAN.md`](docs/DEVELOPMENT_PLAN.md) for the phased plan
+toward a real terminal + **Claude account login** (running the official Claude
+Code CLI on-device, Termux-style).
+
+## License
+
+Licensed under the **GNU General Public License v3.0** — see [`LICENSE`](LICENSE).
+GPLv3 applies because the roadmap reuses Termux components (terminal core +
+bootstrap) to run the official Claude Code CLI on-device.
 
 ## Built by [0xAre](https://github.com/0xAre)
