@@ -13,7 +13,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.zeroxare.claudemobile.ui.screens.MainScreen
 import com.zeroxare.claudemobile.ui.screens.SettingsScreen
 import com.zeroxare.claudemobile.ui.screens.TerminalScreen
 import com.zeroxare.claudemobile.ui.theme.ClaudeMobileTheme
@@ -48,12 +47,6 @@ fun AppNavigation() {
             val terminalViewModel: TerminalViewModel = viewModel()
             TerminalScreen(
                 viewModel = terminalViewModel,
-                onOpenSettings = { navController.navigate("settings") }
-            )
-        }
-        composable("main") {
-            MainScreen(
-                viewModel = viewModel,
                 onOpenSettings = { navController.navigate("settings") }
             )
         }

@@ -78,15 +78,52 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         appendText(cb.toString())
     }
 
+    // Minimal ANSI state machine (persists across chunks, since an escape
+    // sequence can be split between reads). Handles SGR colors (kept for the
+    // renderer), erase-line/clear-screen, backspace and tabs; other cursor-
+    // movement sequences are consumed so they don't leak as garbage text.
+    private var escState = 0 // 0 = normal, 1 = saw ESC, 2 = inside CSI
+    private val csi = StringBuilder()
+
     private fun appendText(text: String) {
         for (ch in text) {
-            when (ch) {
-                '\n' -> flushLine()
-                '\r' -> lineBuf.setLength(0)
-                else -> lineBuf.append(ch)
+            when (escState) {
+                0 -> when {
+                    ch == esc -> escState = 1
+                    ch == '\n' -> flushLine()
+                    ch == '\r' -> lineBuf.setLength(0)
+                    ch == '\b' -> if (lineBuf.isNotEmpty()) lineBuf.deleteCharAt(lineBuf.length - 1)
+                    ch == '\t' -> lineBuf.append("    ")
+                    ch.code < 32 -> { /* ignore other C0 control chars */ }
+                    else -> lineBuf.append(ch)
+                }
+                1 -> {
+                    if (ch == '[') { escState = 2; csi.setLength(0) }
+                    else escState = 0 // ignore non-CSI escapes (e.g. ESC ] OSC)
+                }
+                2 -> {
+                    csi.append(ch)
+                    if (ch in '@'..'~') { // final byte of the CSI sequence
+                        handleCsi(csi.toString())
+                        escState = 0
+                    }
+                }
             }
         }
         currentLine.value = AnsiParser.parse(lineBuf.toString())
+    }
+
+    private fun handleCsi(seq: String) {
+        when {
+            // SGR (colors/styles): keep so AnsiParser can render it.
+            seq.endsWith('m') -> lineBuf.append(esc).append('[').append(seq)
+            // Erase in display: 2J clears the screen.
+            seq.endsWith('J') -> if (seq.startsWith("2")) { lines.clear(); lineBuf.setLength(0) }
+            // Erase in line: clear the current line buffer.
+            seq.endsWith('K') -> lineBuf.setLength(0)
+            // Cursor movement / others: consume without emitting.
+            else -> { /* ignored */ }
+        }
     }
 
     private fun flushLine() {
