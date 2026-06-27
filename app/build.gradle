@@ -11,12 +11,32 @@ android {
     defaultConfig {
         applicationId "com.zeroxare.claudemobile"
         minSdk 26
-        targetSdk 34
+        // targetSdk is pinned to 28 on purpose: Android 10+ (API 29+) blocks
+        // exec() of binaries from the app's writable data dir unless targetSdk
+        // <= 28. Running the bundled Node/Claude Code binaries requires this
+        // (same approach as Termux). See docs/FASE2.md.
+        targetSdk 28
         versionCode 1
         versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
+        }
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=none'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.22.1'
         }
     }
 
