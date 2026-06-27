@@ -114,14 +114,11 @@ fun MainScreen(
                 // Claude panel
                 AnimatedVisibility(
                     visible = viewModel.isClaudePanelOpen.value,
+                    modifier = Modifier.weight(0.6f),
                     enter = slideInHorizontally { it } + fadeIn(),
                     exit = slideOutHorizontally { it } + fadeOut()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(0.6f)
-                            .fillMaxHeight()
-                    ) {
+                    Row(modifier = Modifier.fillMaxSize()) {
                         Box(
                             modifier = Modifier.fillMaxHeight().width(1.dp).background(TerminalBorder)
                         )
