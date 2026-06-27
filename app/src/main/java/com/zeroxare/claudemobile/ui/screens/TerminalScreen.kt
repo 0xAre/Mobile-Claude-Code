@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -43,21 +45,25 @@ fun TerminalScreen(
     onOpenSettings: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) { viewModel.startSession() }
+    LaunchedEffect(Unit) {
+        viewModel.startSession()
+        focusRequester.requestFocus()
+    }
     LaunchedEffect(viewModel.lines.size) {
         if (viewModel.lines.isNotEmpty()) {
             listState.animateScrollToItem(viewModel.lines.size - 1)
         }
     }
 
-    val mono = remember {
-        TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = TerminalText)
-    }
+    val fontSizeSp = viewModel.fontSize.value.sp
+    val mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = fontSizeSp, color = TerminalText)
     val density = LocalDensity.current
     // Monospace cell size (approx): advance ~0.6em, line height ~1.4em.
-    val cellW = with(density) { 13.sp.toPx() } * 0.6f
-    val cellH = with(density) { 13.sp.toPx() } * 1.4f
+    val cellPx = with(density) { fontSizeSp.toPx() }
+    val cellW = cellPx * 0.6f
+    val cellH = cellPx * 1.4f
 
     Column(
         modifier = Modifier
@@ -140,6 +146,8 @@ fun TerminalScreen(
             KeyCap("/") { viewModel.sendRaw("/") }
             KeyCap("-") { viewModel.sendRaw("-") }
             KeyCap("~") { viewModel.sendRaw("~") }
+            KeyCap("A-") { viewModel.fontDec() }
+            KeyCap("A+") { viewModel.fontInc() }
         }
 
         // Input
@@ -155,8 +163,10 @@ fun TerminalScreen(
             BasicTextField(
                 value = viewModel.input.value,
                 onValueChange = { viewModel.input.value = it },
-                modifier = Modifier.weight(1f),
-                textStyle = TextStyle(color = TerminalText, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester),
+                textStyle = TextStyle(color = TerminalText, fontFamily = FontFamily.Monospace, fontSize = fontSizeSp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { viewModel.submitInput() }),

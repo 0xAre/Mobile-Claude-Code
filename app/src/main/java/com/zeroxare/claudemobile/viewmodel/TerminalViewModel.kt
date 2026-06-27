@@ -37,6 +37,10 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     val input = mutableStateOf("")
     val interactive = mutableStateOf(false)
     val status = mutableStateOf("starting…")
+    val fontSize = mutableStateOf(13)
+
+    fun fontInc() { fontSize.value = (fontSize.value + 1).coerceAtMost(28) }
+    fun fontDec() { fontSize.value = (fontSize.value - 1).coerceAtLeast(8) }
 
     private val lineBuf = StringBuilder()
 
