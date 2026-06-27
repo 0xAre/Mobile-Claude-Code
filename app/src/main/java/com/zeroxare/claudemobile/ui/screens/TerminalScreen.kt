@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,10 @@ fun TerminalScreen(
     val mono = remember {
         TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = TerminalText)
     }
+    val density = LocalDensity.current
+    // Monospace cell size (approx): advance ~0.6em, line height ~1.4em.
+    val cellW = with(density) { 13.sp.toPx() } * 0.6f
+    val cellH = with(density) { 13.sp.toPx() } * 1.4f
 
     Column(
         modifier = Modifier
@@ -89,6 +95,13 @@ fun TerminalScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
+                .onSizeChanged { size ->
+                    if (cellW > 0f && cellH > 0f) {
+                        val cols = (size.width / cellW).toInt().coerceAtLeast(10)
+                        val rows = (size.height / cellH).toInt().coerceAtLeast(4)
+                        viewModel.resize(rows, cols)
+                    }
+                }
         ) {
             items(viewModel.lines) { line ->
                 BasicText(text = line, style = mono)

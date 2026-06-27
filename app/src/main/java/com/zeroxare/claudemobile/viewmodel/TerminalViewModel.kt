@@ -113,6 +113,11 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         session?.write(seq)
     }
 
+    /** Update the PTY window size when the on-screen terminal area changes. */
+    fun resize(rows: Int, cols: Int) {
+        session?.resize(rows, cols)
+    }
+
     /** Install the bootstrap (Node + Claude Code), then run the CLI setup. */
     fun setupClaude() {
         viewModelScope.launch {

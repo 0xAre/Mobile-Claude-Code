@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -28,6 +29,9 @@ class TerminalSession(
 
     private var stdin: OutputStream? = null
     private var pid: Int = -1
+    private var ptyFd: FileDescriptor? = null
+    private var rows: Int = 24
+    private var cols: Int = 80
     var isInteractive: Boolean = false
         private set
 
@@ -46,9 +50,12 @@ class TerminalSession(
             rows = rows,
             cols = cols
         )
+        this.rows = rows
+        this.cols = cols
         if (pty != null) {
             isInteractive = true
             pid = pty.pid
+            ptyFd = pty.fd
             stdin = FileOutputStream(pty.fd)
             pumpReader(FileInputStream(pty.fd))
         } else {
@@ -101,7 +108,12 @@ class TerminalSession(
     }
 
     fun resize(rows: Int, cols: Int) {
-        // Only meaningful for the PTY path.
+        if (rows <= 0 || cols <= 0) return
+        if (rows == this.rows && cols == this.cols) return
+        this.rows = rows
+        this.cols = cols
+        val fd = ptyFd ?: return
+        PtyProcess.setWindowSize(fd, rows, cols)
     }
 
     fun close() {
