@@ -1,0 +1,52 @@
+name: Build APK
+
+# Builds an installable debug APK in the cloud — no laptop needed.
+# - Runs on every push and can be started manually from the Actions tab.
+# - Download the APK from the run's "Artifacts" section on your phone.
+# - Pushing a tag like v1.0.0 also publishes the APK to a GitHub Release.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to publish releases on tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-terminal-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Publish APK to Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/debug/*.apk
+          generate_release_notes: true
