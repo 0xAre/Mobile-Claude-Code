@@ -62,15 +62,21 @@ app/src/main/java/com/zeroxare/claudemobile/
 Ada tiga jalur untuk mewujudkan "terminal + Claude Code di Android". Ini
 menentukan semua fase berikutnya.
 
-### Path A — Bungkus Termux + jalankan Claude Code CLI asli
+> ⚠️ **Faktor penentu — autentikasi.** Jika syaratnya **login dengan akun Claude
+> (langganan Pro/Max), seperti Claude Code desktop**, maka pilihan path TIDAK
+> bebas: hanya **Path A** yang sah secara ToS. Lihat **Bagian 3a** untuk alasannya.
+
+### Path A — Bungkus Termux + jalankan Claude Code CLI asli ⭐ Wajib bila ingin login akun Claude
 Adopsi inti terminal Termux (`terminal-emulator` + `terminal-view`), bundel
 **bootstrap rootfs** Linux, lalu user `pkg install nodejs` dan
 `npm i -g @anthropic-ai/claude-code` → menjalankan **Claude Code CLI yang asli**.
 - ➕ Paling powerful & paling "asli"; dapat semua tool Claude Code gratis.
+- ➕ **Bisa login dengan akun Claude (OAuth)** — karena yang melakukan OAuth adalah
+  binary Claude Code resmi, bukan aplikasi kita → **tetap sesuai ToS Anthropic**.
 - ➖ Kompleksitas native (JNI, bootstrap per-ABI) tinggi; **lisensi Termux GPLv3**
   memaksa seluruh aplikasi jadi GPLv3; ukuran APK besar.
 
-### Path B — Agen Claude Code native (Kotlin) ⭐ Rekomendasi awal
+### Path B — Agen Claude Code native (Kotlin)
 Pertahankan UI Compose. Bangun **terminal nyata berbasis PTY** (boleh pakai
 library terminal Termux yang permisif sebagai komponen view), lalu implementasi
 **loop agen tool-use di Kotlin**: tool `read_file`, `write_file`, `run_command`,
@@ -78,14 +84,52 @@ library terminal Termux yang permisif sebagai komponen view), lalu implementasi
 sandbox aplikasi.
 - ➕ Kontrol penuh atas UX & keamanan; APK ringan; tidak wajib GPLv3.
 - ➖ Harus implementasi sendiri loop agen + tool (tapi terukur & bertahap).
+- ❌ **HANYA boleh pakai API key (BYOK).** Menyuntikkan token OAuth langganan
+  Pro/Max ke app sendiri **melanggar ToS Anthropic dan aktif diblokir** (Bagian 3a).
 
-### Path C — Hybrid (target akhir)
-UI native (Path B) + opsi bootstrap ala Termux untuk shell sungguhan, sehingga
-user bisa memilih: agen native **atau** menjalankan CLI asli.
+### Path C — Hybrid (target akhir) ⭐ Rekomendasi
+UI native + **dua mode** yang user bisa pilih:
+1. **Mode Akun Claude** → bootstrap Termux + jalankan Claude Code CLI asli (login OAuth, pakai langganan).
+2. **Mode API Key** → agen native Kotlin (Path B) untuk pengalaman terintegrasi & ringan.
 
-> **Rekomendasi:** mulai **Path B** (cepat sampai "usable"), siapkan abstraksi
-> agar bisa berkembang ke **Path C**. Catat keputusan lisensi sejak awal: jika
-> kelak menyalin kode Termux non-permisif, repo harus GPLv3.
+> **Rekomendasi:** karena Anda ingin **login akun Claude**, jadikan **Path A inti
+> produk**, lalu kembangkan ke **Path C** agar pemilik API key juga terlayani.
+> Implikasi lisensi: menyalin kode Termux/menjalankan stack-nya membuat repo
+> efektif **GPLv3** — putuskan sejak awal.
+
+---
+
+## 3a. Autentikasi: Login Akun Claude vs API Key (KRITIS)
+
+Pertanyaan kunci: *"Bisakah login dengan akun Claude saya, bukan API key, seperti
+Claude Code desktop?"* — **Bisa, tetapi hanya lewat jalur yang sah (Path A).**
+
+### Fakta (per 2026)
+- Claude Code desktop login via **OAuth** ke akun claude.ai (Pro/Max/Team). Token
+  berformat `sk-ant-oat01-…`; pemakaian ditarik dari **kuota langganan**, bukan
+  billing per-token.
+- **Namun OAuth itu eksklusif untuk Claude Code & Claude.ai resmi.** Memakai token
+  OAuth plan Free/Pro/Max di **aplikasi pihak ketiga** = **pelanggaran Consumer
+  ToS** Anthropic. Penegakan dimulai **9 Jan 2026** (memblokir akses OAuth Max di
+  klien pihak ketiga) dan dipertegas **19 Feb 2026**. Risiko: akun bisa diblokir.
+
+### Konsekuensi untuk desain
+| Pendekatan | Login akun Claude? | Status ToS | Keterangan |
+|------------|--------------------|-----------|------------|
+| **Path A** — jalankan Claude Code CLI asli di terminal | ✅ Ya, via `claude` (OAuth resmi) | ✅ **Sah** | Yang autentikasi binary resmi, bukan app kita |
+| **Path B native + token langganan** | ✅ secara teknis | ❌ **Melanggar & diblokir** | Jangan lakukan |
+| **Path B/C native + API key (BYOK)** | ❌ (pakai API key) | ✅ Sah | Billing per-token via Console |
+
+### Rancangan autentikasi yang direkomendasikan
+- **Untuk login akun Claude:** sediakan **Mode Akun Claude** = bootstrap CLI asli,
+  user menjalankan `claude` → CLI membuka alur login OAuth-nya sendiri (browser /
+  paste code). App **tidak** menyentuh/menyimpan token OAuth — cukup menjadi
+  terminal tempat CLI berjalan. Inilah satu-satunya cara legit "pakai akun".
+- **Untuk agen native:** sediakan **Mode API Key** terpisah (login Console / paste
+  API key), disimpan terenkripsi (lihat G5).
+- **Catatan:** alur OAuth untuk plan Free di Termux kadang bermasalah; API key
+  lebih andal. Untuk akun, `claude setup-token` bisa dipakai pada skenario
+  non-browser, tetapi tetap dalam konteks Claude Code resmi.
 
 ---
 
@@ -190,14 +234,18 @@ sebenarnya:** lanjut Fase 2 → 3 → 4.
 - **Kebijakan Play Store:** `MANAGE_EXTERNAL_STORAGE` & eksekusi kode sering ditolak.
   *Mitigasi:* izin minimal; distribusi via GitHub Releases / F-Droid sebagai jalur utama.
 - **Biaya API:** loop agen boros token. *Mitigasi:* prompt caching, batas konteks, indikator biaya.
+- **Auth akun Claude (ToS):** menyuntik token OAuth langganan ke app sendiri =
+  pelanggaran & diblokir (Bagian 3a). *Mitigasi:* "Mode Akun Claude" HANYA via CLI
+  asli (Path A); agen native HANYA pakai API key.
 
 ---
 
 ## 8. Langkah Berikutnya yang Konkret
 
 1. **Fase 0 item #1** — generate Gradle wrapper & `.gitignore`, pastikan build hijau. (Saya bisa langsung kerjakan ini setelah Anda setuju.)
-2. Putuskan **Path A vs B vs C** (rekomendasi: B → C) dan **lisensi** (MIT/Apache vs GPLv3).
-3. Konfirmasi target minSdk (sekarang 26) — PTY/bootstrap punya implikasi di versi lama.
+2. **Karena ingin login akun Claude:** kunci **Path A → C** (CLI asli untuk akun + opsi API key). Path B native-saja tidak bisa pakai akun langganan secara sah.
+3. Putuskan **lisensi** (menjalankan/menyalin stack Termux ⇒ efektif **GPLv3**).
+4. Konfirmasi target minSdk (sekarang 26) — PTY/bootstrap punya implikasi di versi lama.
 
 > Setelah arah disetujui, saya lanjut mengeksekusi Fase 0 (membuat proyek
 > benar-benar bisa di-build & menghasilkan APK debug), lalu naik per fase.
