@@ -35,13 +35,15 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee build-output.log
 
-      - name: Surface compiler errors on failure
-        if: failure()
+      - name: Surface compiler errors
+        if: always()
         run: |
           echo "===== Kotlin/AAPT errors ====="
-          grep -nE "^e: |^w: |error:|FAILED|Aapt2Exception" build-output.log | head -100 || true
+          grep -nE "^e: |error: |Aapt2Exception|Unresolved reference|FAILURE:" build-output.log | head -120 || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
