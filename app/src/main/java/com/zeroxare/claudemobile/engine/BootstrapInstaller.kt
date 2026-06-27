@@ -122,8 +122,42 @@ class BootstrapInstaller(
 
     private fun finishInstall() {
         applySymlinks()
+        relocatePaths()
         env.bootstrapMarker.writeText(BOOTSTRAP_VERSION)
     }
+
+    /**
+     * Termux binaries/scripts are built for the prefix `/data/data/com.termux/
+     * files/...`. This app uses a different package, so rewrite those hardcoded
+     * paths (script shebangs, configs, wrappers) to our prefix. ELF/binary files
+     * are skipped — they resolve their libs via LD_LIBRARY_PATH (set in
+     * [LinuxEnvironment.buildEnv]); only text files are relocated.
+     */
+    private fun relocatePaths() {
+        val ourUsr = env.prefixDir.absolutePath
+        val ourHome = env.homeDir.absolutePath
+        env.prefixDir.walkTopDown().filter { it.isFile && !isSymlink(it) }.forEach { f ->
+            if (f.length() == 0L || f.length() > 4_000_000L) return@forEach
+            val head = ByteArray(minOf(8192, f.length().toInt()))
+            val read = try { f.inputStream().use { it.read(head) } } catch (_: Exception) { return@forEach }
+            if (read <= 0) return@forEach
+            // Skip binaries: ELF magic or any NUL byte in the sampled head.
+            val isElf = read >= 4 && head[0] == 0x7F.toByte() &&
+                head[1] == 'E'.code.toByte() && head[2] == 'L'.code.toByte() && head[3] == 'F'.code.toByte()
+            if (isElf || head.take(read).any { it.toInt() == 0 }) return@forEach
+            val text = try { f.readText() } catch (_: Exception) { return@forEach }
+            if (!text.contains(TERMUX_PREFIX) && !text.contains(TERMUX_HOME)) return@forEach
+            val fixed = text.replace(TERMUX_PREFIX, ourUsr).replace(TERMUX_HOME, ourHome)
+            if (fixed != text) {
+                val wasExec = f.canExecute()
+                try { f.writeText(fixed) } catch (_: Exception) { return@forEach }
+                if (wasExec) f.setExecutable(true, false)
+            }
+        }
+    }
+
+    private fun isSymlink(f: File): Boolean =
+        runCatching { f.canonicalFile != f.absoluteFile }.getOrDefault(false)
 
     /**
      * Termux ships a SYMLINKS.txt listing symlinks to recreate after extraction
@@ -147,5 +181,7 @@ class BootstrapInstaller(
 
     companion object {
         const val BOOTSTRAP_VERSION = "1"
+        private const val TERMUX_PREFIX = "/data/data/com.termux/files/usr"
+        private const val TERMUX_HOME = "/data/data/com.termux/files/home"
     }
 }

@@ -97,12 +97,25 @@ perangkat; kemungkinan perlu iterasi (lihat caveat di bawah).
 3. Buat Release tag **`bootstrap-v1`**, lampirkan zip-nya
 4. App mengunduhnya saat "Setup Claude".
 
-#### Caveat relokasi (penting)
-Biner Termux di-build untuk prefix `/data/data/com.termux/...`, sedangkan app ini
-memakai `/data/data/com.zeroxare.claudemobile/...`. Agar jalan, app menyetel
-`LD_LIBRARY_PATH=$PREFIX/lib` (lihat `LinuxEnvironment.buildEnv`). Jika ada biner
-yang masih hardcode path Termux, perlu `patchelf`/`termux-exec` saat membangun
-bootstrap. Inilah bagian yang perlu divalidasi di perangkat.
+#### Relokasi path (sudah ditangani app)
+Biner/skrip Termux di-build untuk prefix `/data/data/com.termux/...`, sedangkan
+app ini memakai `/data/data/com.zeroxare.claudemobile/...`. Saat install,
+`BootstrapInstaller.relocatePaths()` **otomatis menulis ulang** path Termux →
+prefix app pada semua file teks (shebang skrip, config, wrapper). Biner ELF
+di-skip dan menemukan lib-nya via `LD_LIBRARY_PATH=$PREFIX/lib`
+(`LinuxEnvironment.buildEnv`).
+
+#### Catatan jujur soal sumber bootstrap
+- **Opsi B (on-device) = paling andal.** Biner Termux adalah **bionic** (libc
+  Android), jadi paling aman dibuat di Android (Termux) lalu di-zip. App akan
+  merelokasi path-nya otomatis saat install.
+- **Opsi A (qemu di CI) = experimental & kemungkinan TIDAK jalan apa adanya:**
+  `qemu-user` di runner glibc tak punya linker/libc bionic, sehingga menjalankan
+  `apt`/`npm` Termux saat build sering gagal. Untuk CI yang benar-benar jalan
+  perlu emulator Android penuh atau rootfs glibc + proot — di luar lingkup MVP.
+- Yang masih perlu **divalidasi di perangkat**: apakah `node` (ELF bionic) jalan
+  di prefix app dengan `LD_LIBRARY_PATH` + path ter-relokasi. Dari situ kita
+  iterasi (mis. tambah `patchelf`/`termux-exec` bila perlu).
 
 ## Catatan cepat untuk test SEKARANG (interim)
 

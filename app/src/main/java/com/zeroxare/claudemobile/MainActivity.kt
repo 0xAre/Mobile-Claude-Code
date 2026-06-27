@@ -17,7 +17,6 @@ import com.zeroxare.claudemobile.ui.screens.SettingsScreen
 import com.zeroxare.claudemobile.ui.screens.TerminalScreen
 import com.zeroxare.claudemobile.ui.theme.ClaudeMobileTheme
 import com.zeroxare.claudemobile.ui.theme.TerminalBg
-import com.zeroxare.claudemobile.viewmodel.MainViewModel
 import com.zeroxare.claudemobile.viewmodel.TerminalViewModel
 
 class MainActivity : ComponentActivity() {
@@ -40,7 +39,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val viewModel: MainViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "terminal") {
         composable("terminal") {
@@ -51,10 +49,7 @@ fun AppNavigation() {
             )
         }
         composable("settings") {
-            SettingsScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

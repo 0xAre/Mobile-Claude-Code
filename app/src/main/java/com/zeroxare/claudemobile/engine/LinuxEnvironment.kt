@@ -52,6 +52,7 @@ class LinuxEnvironment(context: Context) {
             "TMPDIR" to tmpDir.absolutePath,
             "LANG" to "en_US.UTF-8",
             "TERM" to "xterm-256color",
+            "PS1" to "$ ",
             // Claude Code authenticates with your Claude account via OAuth; no API
             // key is injected here. The CLI stores its own credentials under HOME.
             "LD_LIBRARY_PATH" to File(prefixDir, "lib").absolutePath
