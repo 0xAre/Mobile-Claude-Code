@@ -52,6 +52,23 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
+      # Mirror the APK to an orphan 'apk-latest' branch so it can be fetched via
+      # plain git (the Actions artifact blob host is not always reachable).
+      - name: Publish APK to apk-latest branch
+        if: success() && github.event_name == 'push'
+        run: |
+          set -e
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          tmp=$(mktemp -d); cp "$APK" "$tmp/claude-terminal-debug.apk"
+          git config user.name "0xAre"
+          git config user.email "aaryansyach4@gmail.com"
+          git checkout --orphan apk-latest
+          git rm -rf . >/dev/null 2>&1 || true
+          mkdir -p apk && cp "$tmp/claude-terminal-debug.apk" apk/claude-terminal-debug.apk
+          git add -f apk/claude-terminal-debug.apk
+          git commit -m "APK build for ${GITHUB_SHA}"
+          git push -f origin apk-latest
+
       - name: Publish APK to Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
